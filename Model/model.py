@@ -85,7 +85,7 @@ class TransformerBlock(nn.Module):
         x = x + self.ffn(self.ln2(x))
         return x
     
-class Peregrine(nn.Module):
+class StableCAT(nn.Module):
     def __init__(self,**kwargs):
         super().__init__()
         self.vocab_size = kwargs.get('vocab_size',100)
