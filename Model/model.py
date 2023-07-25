@@ -24,13 +24,32 @@ class AttentionHead(nn.Module):
         rotary_emb = RotaryEmbedding(dim=96)
         key = rotary_emb.rotate_queries_or_keys(self.k(x))
         query = rotary_emb.rotate_queries_or_keys(self.q(x))
-        attn = query @ key.transpose(-2,-1) * C** -0.5
-        #c = dim(k)
-        attn = attn.masked_fill(self.tril[:T,:T] == 0, float('-inf'))
-        attn = F.softmax(attn,dim=-1)
         value = self.v(x)
-        out = attn @ value
-        return out
+        outs = None 
+
+        #add flash attention for awesomeness
+        with torch.backends.cuda.sdp_kernel(
+            enable_flash=True,
+            enable_math=False,
+            enable_mem_efficient=False):
+                out = F.scaled_dot_product_attention(
+                    query,key,value,
+                    attn_mask = mask,
+                    dropout_p = flash_attn_dropout,
+                    is_casual=casual,
+                    scale=scale)
+                print('using flash attention')
+                outs = out
+        if torch.backends.cuda.flash_sdp_enabled():
+            return outs
+        else:
+            attn = query @ key.transpose(-2,-1) * C** -0.5
+            #c = dim(k)
+            attn = attn.masked_fill(self.tril[:T,:T] == 0, float('-inf'))
+            attn = F.softmax(attn,dim=-1)
+            print('flash attention disabled') 
+            outs = attn @ value
+            return outs
 #multi head attention class
 class MHA(nn.Module):
     def __init__(self,num_heads,head_size,num_embed,block_size,dropout):
