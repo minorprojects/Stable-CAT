@@ -1,7 +1,7 @@
 import os
 import torch
 from datetime import datetime
-
+from torch.distributed.fsdp import FullyShardedDataParallel as FSDP
 #some hyperparameters
 MAX_ITER = 5000
 BATCH_SIZE = 32
@@ -11,10 +11,10 @@ betas = (0.9,0.95)
 WEIGHT_DECAY = 0.1
 grad_norm_clip = 1.0
 BLOCK_SIZE =100
-VOCAB_SIZE=32000,
-NUM_EMBED=1024,
+VOCAB_SIZE=12000,
+NUM_EMBED=512,
 NUM_HEADS=96,
-NUM_LAYER=100,
+NUM_LAYER=96,
 DROPOUT=0.1,
 
 #i assume you know what this does, it's just selecting device(either cuda if available or cpu) 
@@ -23,14 +23,10 @@ DEVICE = 'cuda' if torch.cuda.is_available() else 'cpu'
 
 #encode text sequence using peregrine_tokenizer
 # Any BPETokenizer is supported sunce the peregrine tokenizer is trained using BPE(Byte Pair encoding)
-def encode(text_sq: str, tokenizer: any) -> torch.Tensor:
-    tokens = tokenizer.encode(text_sq)
-    token_indices = tokens.ids
-    token_indices = torch.tensor(token_indices,dtype=torch.long)
-    return token_indices
+def tokenize_dataset_func(examples, tokenizer: any,data_sub):
+    return tokenizer.encode(examples[data_sub])
 
-def decode(enc_sec: torch.Tensor,tokenizer:any) -> str:
-    enc_sec = enc.tolist()
+def tokenizer_decode(enc_sec: torch.Tensor,tokenizer:any):
     text = tokenizer.decode(enc_sec)
     return text
 
@@ -41,6 +37,12 @@ def get_batch(data: list[str],block_size: int,batch_size: int):
     y = torch.stack([data[i + 1: i + block_size + 1] for i in ix])
     x,y = x.to(DEVICE), y.to(DEVICE)
     return x,y
+    
+#add FSDP for parallel training
+#ensure device is set to cuda before enabling FSDP
+def enable_fsdp(model):
+    shared_module = FSDP(model)
+    return shared_module
 
 @torch.no_grad()
 def estimate_loss(
@@ -48,7 +50,8 @@ def estimate_loss(
     model: torch.nn.Module,
     block_size: int,
     batch_size: int,
-    eval_iters: int = 10,):
+    eval_iters: int = 10,
+    ):
     out = {}
     model.eval()
     losses = torch.zeros(eval_iters)
