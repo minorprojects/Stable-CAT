@@ -4,6 +4,7 @@ from datetime import datetime
 from torch.distributed.fsdp import FullyShardedDataParallel as FSDP
 from torch.utils.data import DataLoader
 from datasets import load_dataset
+from tokenizers import Tokenizer
 #some hyperparameters
 MAX_ITER = 5000
 BATCH_SIZE = 32
@@ -25,15 +26,16 @@ DEVICE = 'cuda' if torch.cuda.is_available() else 'cpu'
 
 #encode text sequence using peregrine_tokenizer
 # Any BPETokenizer is supported sunce the peregrine tokenizer is trained using BPE(Byte Pair encoding)
-def tokenize_dataset_func(examples, tokenizer: any,data_sub):
-    return tokenizer.encode(examples[data_sub])
+tokenizer = Tokenizer.from_file('peregrine_tokenizer.json')
+def tokenize_dataset_func(examples):
+    return tokenizer.encode(examples['text'])
 
-def tokenizer_decode(enc_sec: torch.Tensor,tokenizer:any):
+def tokenizer_decode(enc_sec: torch.Tensor):
     text = tokenizer.decode(enc_sec)
     return text
 
 #you can use the pytorcch dataLoader class , which is what i also used during some part of the training
-dataset = load_dataset('')
+dataset = load_dataset('cerebras/SlimPajama-627B',streaming=True)
 tokenized_dataset = dataset.map(tokenize_dataset_func,batched=True)
 def group_texts(examples):
     concantenate_examples = {k: sum(examples[k], []) for k in examples.keys()}
