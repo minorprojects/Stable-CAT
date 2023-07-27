@@ -2,6 +2,8 @@ import os
 import torch
 from datetime import datetime
 from torch.distributed.fsdp import FullyShardedDataParallel as FSDP
+from torch.utils.data import DataLoader
+from datasets import load_dataset
 #some hyperparameters
 MAX_ITER = 5000
 BATCH_SIZE = 32
@@ -31,12 +33,27 @@ def tokenizer_decode(enc_sec: torch.Tensor,tokenizer:any):
     return text
 
 #you can use the pytorcch dataLoader class , which is what i also used during some part of the training
-def get_batch(data: list[str],block_size: int,batch_size: int):
-    ix = torch.randint(len(data) - block_size,(batch_size))
-    x = torch.stack([data[i : i + block_size] for i in ix])
-    y = torch.stack([data[i + 1: i + block_size + 1] for i in ix])
-    x,y = x.to(DEVICE), y.to(DEVICE)
-    return x,y
+dataset = load_dataset('')
+tokenized_dataset = dataset.map(tokenize_dataset_func,batched=True)
+def group_texts(examples):
+    concantenate_examples = {k: sum(examples[k], []) for k in examples.keys()}
+    total_length = len(concatenated_examples[list(examples.keys())[0]])
+    total_length = (total_length // block_size) * block_size
+    result = {
+        k: [t[i : i + block_size] for i in range(0, total_length,block_size)]
+        for k,t in concatenated_examples.items()
+    }
+    results['labels'] = result['input_ids'].copy()
+    return result
+
+def get_data(tokenize_ds):
+    lm_datasets = tokenized_datasets.map(
+    group_texts,
+    batched=True,
+    batch_size=1000,
+    num_proc=4)
+    data = DataLoader(lm_dataset,batch_size=200)
+    return data
     
 #add FSDP for parallel training
 #ensure device is set to cuda before enabling FSDP
