@@ -40,7 +40,7 @@ tokenized_dataset = dataset.map(tokenize_dataset_func,batched=True)
 def group_texts(examples):
     concantenate_examples = {k: sum(examples[k], []) for k in examples.keys()}
     total_length = len(concatenated_examples[list(examples.keys())[0]])
-    total_length = (total_length // block_size) * block_size
+    total_length = (total_length // 100) * 100
     result = {
         k: [t[i : i + block_size] for i in range(0, total_length,block_size)]
         for k,t in concatenated_examples.items()
