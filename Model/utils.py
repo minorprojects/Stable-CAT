@@ -61,24 +61,7 @@ def enable_fsdp(model):
     shared_module = FSDP(model)
     return shared_module
 
-@torch.no_grad()
-def estimate_loss(
-    data: list[str],
-    model: torch.nn.Module,
-    block_size: int,
-    batch_size: int,
-    eval_iters: int = 10,
-    ):
-    out = {}
-    model.eval()
-    losses = torch.zeros(eval_iters)
-    for k in range(eval_iters):
-        X,Y = get_batch(data=data,block_size=block_size,batch_size=batch_size)
-        logits,loss = model.forward(X,Y)
-        losses[k] = loss.item()
-    out = losses.mean()
-    model.train()
-    return out
+
 
 def load_checkpoint(
     model_class: torch.nn.Module,
