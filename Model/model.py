@@ -13,7 +13,7 @@ class AttentionHead(nn.Module):
         self.q = nn.Linear(num_embed,head_size,bias=False)
         self.k = nn.Linear(num_embed,head_size,bias=False)
         self.v = nn.Linear(num_embed,head_size,bias=False)
-        
+        self.flash = hasattr(torch.nn.functional,'scaled_dot_product_attention')
         #create lower triangular matrix for masking
         self.register_buffer('tril',torch.tril(torch.ones(block_size,block_size)))
         self.dropout = nn.Dropout(dropout)
@@ -25,31 +25,22 @@ class AttentionHead(nn.Module):
         key = rotary_emb.rotate_queries_or_keys(self.k(x))
         query = rotary_emb.rotate_queries_or_keys(self.q(x))
         value = self.v(x)
-        outs = None 
-
-        #add flash attention for awesomeness
-        with torch.backends.cuda.sdp_kernel(
-            enable_flash=True,
-            enable_math=False,
-            enable_mem_efficient=False):
-                out = F.scaled_dot_product_attention(
-                    query,key,value,
-                    attn_mask = mask,
-                    dropout_p = flash_attn_dropout,
-                    is_casual=casual,
-                    scale=scale)
-                print('using flash attention')
-                outs = out
-        if torch.backends.cuda.flash_sdp_enabled():
-            return outs
+        if self.flash:
+            #add flash attention for awesomeness
+            out = F.scaled_dot_product_attention(
+                query,key,value,
+                attn_mask = mask,
+                dropout_p = flash_attn_dropout,
+                is_casual=casual,
+                scale=scale)
         else:
             attn = query @ key.transpose(-2,-1) * C** -0.5
             #c = dim(k)
             attn = attn.masked_fill(self.tril[:T,:T] == 0, float('-inf'))
             attn = F.softmax(attn,dim=-1)
             print('flash attention disabled') 
-            outs = attn @ value
-            return outs
+            out = attn @ value
+        return out
 #multi head attention class
 class MHA(nn.Module):
     def __init__(self,num_heads,head_size,num_embed,block_size,dropout):
