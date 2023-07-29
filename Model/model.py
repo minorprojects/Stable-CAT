@@ -5,6 +5,7 @@ import tensorflow as tf
 import torch.nn as nn
 import torch.nn.functional as F
 from rotary_embedding_torch import RotaryEmbedding
+from utils import DEVICE
 #attention head for peregrine
 
 class AttentionHead(nn.Module):
