@@ -9,11 +9,11 @@ from utils import DEVICE
 #attention head for peregrine
 
 class AttentionHead(nn.Module):
-    def __init__(self,num_embed,head_size,block_size,dropout):
+    def __init__(self,num_embed,block_size,dropout):
         super(AttentionHead,self).__init__()
-        self.q = nn.Linear(num_embed,head_size,bias=False)
-        self.k = nn.Linear(num_embed,head_size,bias=False)
-        self.v = nn.Linear(num_embed,head_size,bias=False)
+        self.q = nn.Linear(num_embed,2*num_embed,bias=False)
+        self.k = nn.Linear(num_embed,2*num_embed,bias=False)
+        self.v = nn.Linear(num_embed,2*num_embed,bias=False)
         self.flash = hasattr(torch.nn.functional,'scaled_dot_product_attention')
         #create lower triangular matrix for masking
         self.register_buffer('tril',torch.tril(torch.ones(block_size,block_size)))
@@ -31,9 +31,9 @@ class AttentionHead(nn.Module):
             out = F.scaled_dot_product_attention(
                 query,key,value,
                 attn_mask = mask,
-                dropout_p = flash_attn_dropout,
-                is_casual=casual,
-                scale=scale)
+                dropout_p = 0.1,
+                is_causal=True,
+                )
         else:
             attn = query @ key.transpose(-2,-1) * C** -0.5
             #c = dim(k)
