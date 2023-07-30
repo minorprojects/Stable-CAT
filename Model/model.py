@@ -30,7 +30,7 @@ class AttentionHead(nn.Module):
             #add flash attention for awesomeness
             out = F.scaled_dot_product_attention(
                 query,key,value,
-                attn_mask = mask,
+                attn_mask = None,
                 dropout_p = 0.1,
                 is_causal=True,
                 )
