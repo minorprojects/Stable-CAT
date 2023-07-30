@@ -22,7 +22,7 @@ class AttentionHead(nn.Module):
     def forward(self,x):
         B, T , C = x.shape
       #rotary embedding from th roformer paper
-        rotary_emb = RotaryEmbedding(dim=96)
+        rotary_emb = RotaryEmbedding(dim=32)
         key = rotary_emb.rotate_queries_or_keys(self.k(x))
         query = rotary_emb.rotate_queries_or_keys(self.q(x))
         value = self.v(x)
