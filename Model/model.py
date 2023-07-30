@@ -124,6 +124,7 @@ class StableCAT(nn.Module):
         self.lm_head = nn.Linear(self.num_embed, self.vocab_size)
         
     def forward(self,idx,targets=None):
+        B,T = idx.shape
         token_embed = self.token_embedding(idx)
         posit_embed = self.position_embedding(torch.arange(T,device=DEVICE))
         x = token_embed + posit_embed
