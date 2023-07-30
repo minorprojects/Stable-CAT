@@ -9,11 +9,11 @@ from utils import DEVICE
 #attention head for peregrine
 
 class AttentionHead(nn.Module):
-    def __init__(self,num_embed,block_size,dropout):
+    def __init__(self,num_embed,head_size,block_size,dropout):
         super(AttentionHead,self).__init__()
-        self.q = nn.Linear(num_embed,2*num_embed,bias=False)
-        self.k = nn.Linear(num_embed,2*num_embed,bias=False)
-        self.v = nn.Linear(num_embed,2*num_embed,bias=False)
+        self.q = nn.Linear(num_embed,head_size,bias=False)
+        self.k = nn.Linear(num_embed,head_size,bias=False)
+        self.v = nn.Linear(num_embed,head_size,bias=False)
         self.flash = hasattr(torch.nn.functional,'scaled_dot_product_attention')
         #create lower triangular matrix for masking
         self.register_buffer('tril',torch.tril(torch.ones(block_size,block_size)))
@@ -124,21 +124,21 @@ class StableCAT(nn.Module):
         self.lm_head = nn.Linear(self.num_embed, self.vocab_size)
         
     def forward(self,idx,targets=None):
-        B, T = idx.shape
         token_embed = self.token_embedding(idx)
         posit_embed = self.position_embedding(torch.arange(T,device=DEVICE))
         x = token_embed + posit_embed
         x = self.blocks(x)
         logits = self.lm_head(x)
         if targets != None:
-            B,T,C = logits.shape
-            logits = torch.reshape(logits,(B * T,C))
-            targets = torch.reshape(targets,(B * T))
+            logits= logits[:-1]
+            targets = targets[1:]
+            logits = logits.view(-1,logits.size(-1))
+            targets = targets.view(-1)
             loss = F.cross_entropy(logits,targets)
         else:
             loss = None
         return logits, loss
-    #courtsey to Andrej Karpathyh nanoGPT for the generate function, i think openAi did something similar
+    #courtsey to Andrej Karpathy nanoGPT for the generate function,i just slightly modified it
     def generate(self,idx: torch.Tensor,max_new_tokens: int,block_size: int):
         for _ in range(max_new_tokens):
             #crop the context to the last block_size tokens
