@@ -1,29 +1,31 @@
 import os
 import torch
 from datetime import datetime
-from torch.distributed.fsdp import FullyShardedDataParallel as FSDP
-from torch.utils.data import DataLoader
-from datasets import load_dataset
-from tokenizers import Tokenizer
-from transformers import AutoTokenizer
-#some hyperparameters
-MAX_ITER = 5000
+#some hyperparameters, feel free to modify these to scale the model parameters 
 BATCH_SIZE = 32
 NUM_WORKERS = 4
 LEARNING_RATE = 3e-4
-betas = (0.9,0.95)
 WEIGHT_DECAY = 0.1
 grad_norm_clip = 1.0
-BLOCK_SIZE =100
-VOCAB_SIZE=12000,
+BLOCK_SIZE =128
+VOCAB_SIZE=50304,
 NUM_EMBED=512,
-NUM_HEADS=96,
-NUM_LAYER=96,
+NUM_HEADS=8,
+NUM_LAYER=12,
 DROPOUT=0.1,
-
-#i assume you know what this does, it's just selecting device(either cuda if available or cpu) 
+N_EPOCHS = 500
+N_WARMUP = 1000
+#I assume you know what this does, it's just selecting device(either cuda if available or cpu) 
 DEVICE = 'cuda' if torch.cuda.is_available() else 'cpu'
 
+
+#some handy functions to perfrom minor operations, although this might not be so useful
+def tokenize_dataset_func(examples):
+    return tokenizer(examples['text'],padding='max_length',truncation=True)
+
+def tokenizer_decode(enc_sec: torch.Tensor):
+    text = tokenizer.decode(enc_sec)
+    return text
 
 
 def load_checkpoint(
