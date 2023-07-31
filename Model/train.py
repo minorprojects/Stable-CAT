@@ -5,6 +5,7 @@ from ignite.metrics import RunningAverage
 from ignite.handlers import ModelCheckpoint
 from ignite.contrib.handlers import CosineAnnealingScheduler,create_lr_scheduler_with_warmup,ProgressBar
 from pytorch_pretrained_bert import cached_path
+from torch.distributed.fsdp import FullyShardedDataParalle as FSDP
 import sys,tqdm
 from model import StableCAT
 from transformers import GPT2Tokenizer,BertTokenizer,AutoTokenizer
@@ -70,6 +71,8 @@ print('model with {:.2f}M parameters'.format(sum(p.numel() for p in m.parameters
 def enable_fsdp(model):
     shared_module = FSDP(model)
     return shared_module
+
+''' to add FSDP: m = enable_fsdp(model), then add model to device . Always remember to call enable_fsdp before initializing the optimizer'''
 
 def train(engine,batch) -> None:
   m.train()
