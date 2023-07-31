@@ -22,6 +22,8 @@ from utils import (
     NUM_EMBED,
     NUM_HEADS,
     NUM_LAYER,
+    N_EPOCHS,
+    N_WARMUP,
     grad_norm_clip,
 )
 
